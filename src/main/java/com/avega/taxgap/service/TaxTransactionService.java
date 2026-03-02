@@ -6,13 +6,11 @@ import com.avega.taxgap.dto.TransactionResponse;
 import com.avega.taxgap.entity.ExceptionsManagement;
 import com.avega.taxgap.entity.Transaction;
 import com.avega.taxgap.enums.ComplianceStatus;
-import com.avega.taxgap.enums.Severity;
 import com.avega.taxgap.enums.TaxEventType;
 import com.avega.taxgap.exception.NonBusinessException;
 import com.avega.taxgap.repository.ExceptionManagementRepository;
 import com.avega.taxgap.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.Nullable;
 import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Service;
 import tools.jackson.databind.ObjectMapper;
@@ -22,7 +20,6 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
