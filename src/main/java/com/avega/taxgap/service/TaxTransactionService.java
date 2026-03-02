@@ -1,24 +1,36 @@
 package com.avega.taxgap.service;
 
+import com.avega.taxgap.dto.RuleEngineResponse;
 import com.avega.taxgap.dto.TransactionRequestDto;
 import com.avega.taxgap.dto.TransactionResponse;
+import com.avega.taxgap.entity.ExceptionsManagement;
 import com.avega.taxgap.entity.Transaction;
 import com.avega.taxgap.enums.ComplianceStatus;
-import com.avega.taxgap.enums.TransactionType;
+import com.avega.taxgap.enums.Severity;
+import com.avega.taxgap.enums.TaxEventType;
+import com.avega.taxgap.repository.ExceptionManagementRepository;
 import com.avega.taxgap.repository.TransactionRepository;
 import lombok.RequiredArgsConstructor;
+import org.jspecify.annotations.Nullable;
 import org.springframework.stereotype.Service;
+import tools.jackson.databind.ObjectMapper;
 
-import java.awt.print.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class TaxTransactionService{
 
     private final TransactionRepository transactionRepository;
+    private final RuleEngine ruleEngine;
+    private final AuditLogService auditLogService;
+    private final ExceptionManagementRepository exceptionManagementRepository;
+    private final ObjectMapper objectMapper;
     
     public TransactionResponse uploadTransactions(List<TransactionRequestDto> transactionRequestDto) {
         int successRecord = 0;
@@ -42,6 +54,11 @@ public class TaxTransactionService{
                 transaction.setUpdatedAt(LocalDateTime.now());
                 transactionRepository.save(transaction);
                 failedRecord++;
+                Map<String, String> auditLog = new HashMap<>();
+                auditLog.put("Message","Transaction request validation failed");
+                auditLog.put("Failed message",validationMessage);
+                String detailJson = objectMapper.writeValueAsString(auditLog);
+                auditLogService.updateAuditLogs(transaction, TaxEventType.INGESTION, detailJson);
                 continue;
             }
 
@@ -49,6 +66,7 @@ public class TaxTransactionService{
             BigDecimal taxGap = expectedTax.subtract(transactionRequest.getReportedTax());
             transaction.setExpectedTax(expectedTax);
             transaction.setTaxGap(taxGap);
+
 
             //Compliance validation
             if (transactionRequest.getReportedTax() == null){
@@ -66,7 +84,36 @@ public class TaxTransactionService{
             transaction.setCreatedAt(LocalDateTime.now());
             transaction.setUpdatedAt(LocalDateTime.now());
             transactionRepository.save(transaction);
+            auditLogService.updateAuditLogs(transaction, TaxEventType.TAX_COMPUTATION,
+                    "{\"message\":\"Transaction validation success, record saved to database.\"}");
+            List<RuleEngineResponse> ruleEngineResponses = ruleEngine.evaluate(transaction);
+            if (!ruleEngineResponses.isEmpty()){
+                for (RuleEngineResponse ruleEngineResponse : ruleEngineResponses) {
+                    ExceptionsManagement exceptionsManagement = new ExceptionsManagement();
+                    exceptionsManagement.setTransactionId(transaction.getId());
+                    exceptionsManagement.setRequestTransactionId(transaction.getTransactionId());
+                    exceptionsManagement.setCustomerId(transaction.getCustomerId());
+                    exceptionsManagement.setRuleName(ruleEngineResponse.getRuleName());
+                    exceptionsManagement.setMessage(ruleEngineResponse.getMessage());
+                    exceptionsManagement.setSeverity(ruleEngineResponse.getSeverity());
+                    exceptionsManagement.setCreatedAt(LocalDateTime.now());
+                    exceptionManagementRepository.save(exceptionsManagement);
+                    Map<String, String> auditLog = new HashMap<>();
+                    auditLog.put("Rule Engine validation message","Rule Engine execution failed");
+                    auditLog.put("Failed message",ruleEngineResponse.getRuleName() + ruleEngineResponse.getMessage());
+                    String detailJson = objectMapper.writeValueAsString(auditLog);
+                    auditLogService.updateAuditLogs(transaction, TaxEventType.RULE_EXECUTION, detailJson);
+                }
+                    transaction.setValidationStatus("FAILURE");
+                    transaction.setFailureReason("Rule Engine validation failure");
+                    transaction.setUpdatedAt(LocalDateTime.now());
+                    transactionRepository.save(transaction);
+                    failedRecord++;
+                    continue;
+            }
             successRecord++;
+            auditLogService.updateAuditLogs(transaction, TaxEventType.RULE_EXECUTION,
+                    "{\"Rule Engine validation message\":\"Rule Engine execution success:\"}");
         }
         return new  TransactionResponse(transactionRequestDto.size(),successRecord,failedRecord);
     }
