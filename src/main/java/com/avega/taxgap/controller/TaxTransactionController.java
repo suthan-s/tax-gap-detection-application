@@ -1,6 +1,7 @@
 package com.avega.taxgap.controller;
 
 import com.avega.taxgap.dto.ExceptionResponse;
+import com.avega.taxgap.dto.ExceptionSummaryResponse;
 import com.avega.taxgap.dto.TransactionRequestDto;
 import com.avega.taxgap.dto.TransactionResponse;
 import com.avega.taxgap.entity.ExceptionsManagement;
@@ -30,7 +31,7 @@ public class TaxTransactionController {
     }
 
     @GetMapping("/findExceptions")
-    public ResponseEntity<List<ExceptionResponse>> filter(
+    public ResponseEntity<List<ExceptionResponse>> filterException(
             @RequestParam(required = false) String customerId,
             @RequestParam(required = false) Severity severity,
             @RequestParam(required = false) String ruleName
@@ -38,5 +39,10 @@ public class TaxTransactionController {
         return ResponseEntity.ok(
                 exceptionManagementService.filterExceptions(customerId, severity, ruleName)
         );
+    }
+
+    @GetMapping("/exception-summary")
+    public ResponseEntity<ExceptionSummaryResponse> getExceptionSummary(){
+        return ResponseEntity.ok(exceptionManagementService.getExceptionSummary());
     }
 }
