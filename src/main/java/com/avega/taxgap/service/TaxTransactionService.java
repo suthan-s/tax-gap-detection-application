@@ -30,7 +30,8 @@ public class TaxTransactionService{
     private final AuditLogService auditLogService;
     private final ExceptionManagementRepository exceptionManagementRepository;
     private final ObjectMapper objectMapper;
-    
+
+    //Validate the filed from request based on that save the details in db and execute rule engine
     public TransactionResponse uploadTransactions(List<TransactionRequestDto> transactionRequestDto) {
         try {
             int successRecord = 0;
@@ -117,11 +118,12 @@ public class TaxTransactionService{
             }
             return new TransactionResponse(transactionRequestDto.size(), successRecord, failedRecord);
         }catch (DataAccessException e){
-            throw new NonBusinessException("Failed to upload the tax details from database",e);
+            throw new NonBusinessException("Failed to upload the tax details from database "+e.getMessage(),e);
 
         }
     }
 
+    //Validate the field from the request data
     private String validateFiled(TransactionRequestDto transactionRequest) {
         String message = null;
         if (transactionRequest.getTransactionId() == null || transactionRequest.getTransactionId().trim().isEmpty() ||

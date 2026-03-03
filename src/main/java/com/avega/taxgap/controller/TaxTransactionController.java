@@ -23,6 +23,7 @@ public class TaxTransactionController {
     private final TaxTransactionService taxTransactionService;
     private final ExceptionManagementService exceptionManagementService;
 
+    //Upload API getting the tax details as a request validate the field and execute rule engine validation
     @PostMapping("/upload")
     public ResponseEntity<TransactionResponse> uploadTransaction(@RequestBody List<TransactionRequestDto> transactionRequestDto){
         log.atInfo().log("Tax details upload api called");
@@ -31,6 +32,7 @@ public class TaxTransactionController {
         return ResponseEntity.ok(response);
     }
 
+    //Getting all exception from exception management table
     @GetMapping("/findExceptions")
     public ResponseEntity<List<ExceptionResponse>> filterException(
             @RequestParam(required = false) String customerId,
@@ -43,12 +45,14 @@ public class TaxTransactionController {
         );
     }
 
+    //Getting the exception summary report
     @GetMapping("/exception-summary")
     public ResponseEntity<ExceptionSummaryResponse> getExceptionSummary(){
         log.atInfo().log("Tax details exception summary api called");
         return ResponseEntity.ok(exceptionManagementService.getExceptionSummary());
     }
 
+    //Getting the customer tax summary report
     @GetMapping("/customer-tax-summary")
     public ResponseEntity<List<CustomerTaxSummaryResponse>> getCustomerTaxSummary(){
         log.atInfo().log("Tax details customer tax summary api called");

@@ -21,6 +21,7 @@ public class RuleEngine {
     private final TaxRulesRepository taxRulesRepository;
     private final ObjectMapper objectMapper;
 
+    //Evaluate the rule engine validation
     public List<RuleEngineResponse> evaluate(Transaction request) {
 
         List<TaxRules> rules = taxRulesRepository.findByEnabledTrue();
@@ -58,6 +59,7 @@ public class RuleEngine {
         return violations;
         }
 
+    //Validate high value rule
     private void validateHighValue(Transaction request, JsonNode config, List<RuleEngineResponse> violations, TaxRules taxRules) {
         BigDecimal threshold =
                 config.get("threshold").decimalValue();
@@ -71,6 +73,7 @@ public class RuleEngine {
         }
     }
 
+    //Validate refund rule
     private void validateRefundRule(Transaction request, JsonNode config, List<RuleEngineResponse> violations, TaxRules taxRules) {
         if (request.getTransactionType().equals(TransactionType.REFUND)) {
             BigDecimal maxRefundAmount =
@@ -88,6 +91,7 @@ public class RuleEngine {
 
     }
 
+    //Validate GST rule
     private void validateGstRule(Transaction request, JsonNode config, List<RuleEngineResponse> violations, TaxRules taxRules) {
         BigDecimal slabAmount = config.get("slabAmount").decimalValue();
         BigDecimal requiredTaxRate = config.get("requiredTaxRate").decimalValue();

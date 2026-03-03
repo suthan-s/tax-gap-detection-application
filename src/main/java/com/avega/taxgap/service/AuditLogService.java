@@ -16,6 +16,7 @@ public class AuditLogService {
 
     private final AuditLogsRepository auditLogsRepository;
 
+    //Update the audit log message to the audit logs table
     public void updateAuditLogs(Transaction transaction, TaxEventType eventTYpe, String detailJson){
         try {
             AuditLogs auditLogs = new AuditLogs();
