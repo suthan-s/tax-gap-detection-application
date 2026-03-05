@@ -17,6 +17,7 @@ import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,18 +47,18 @@ public class TaxTransactionService{
                 transaction.setReportedTax(transactionRequest.getReportedTax());
                 transaction.setTransactionType(transactionRequest.getTransactionType());
 
-                String validationMessage = validateFiled(transactionRequest);
+                List<String> validationMessage = validateFiled(transactionRequest);
 
-                if (validationMessage != null) {
+                if (!validationMessage.isEmpty()) {
                     transaction.setValidationStatus("FAILURE");
-                    transaction.setFailureReason(validationMessage);
+                    transaction.setFailureReason(String.join(",",validationMessage));
                     transaction.setCreatedAt(LocalDateTime.now());
                     transaction.setUpdatedAt(LocalDateTime.now());
                     transactionRepository.save(transaction);
                     failedRecord++;
                     Map<String, String> auditLog = new HashMap<>();
                     auditLog.put("Message", "Transaction request validation failed");
-                    auditLog.put("Failed message", validationMessage);
+                    auditLog.put("Failed message", String.join(",",validationMessage));
                     String detailJson = objectMapper.writeValueAsString(auditLog);
                     auditLogService.updateAuditLogs(transaction, TaxEventType.INGESTION, detailJson);
                     continue;
@@ -124,23 +125,23 @@ public class TaxTransactionService{
     }
 
     //Validate the field from the request data
-    private String validateFiled(TransactionRequestDto transactionRequest) {
-        String message = null;
+    private List<String> validateFiled(TransactionRequestDto transactionRequest) {
+        List<String> message =  new ArrayList<>();
         if (transactionRequest.getTransactionId() == null || transactionRequest.getTransactionId().trim().isEmpty() ||
         transactionRequest.getCustomerId() == null || transactionRequest.getCustomerId().trim().isEmpty()){
-            message ="Transaction ID & Customer ID must be present in the value";
+            message.add("Transaction ID & Customer ID must be present in the value");
         }
         if (transactionRequest.getTransactionDate() == null){
-            message = "Transaction date is must be present in the value";
+            message.add("Transaction date is must be present in the value");
         }
         if (transactionRequest.getAmount() == null || transactionRequest.getAmount().compareTo(BigDecimal.ZERO) <=0){
-            message = "Amount must be present and greater than 0";
+            message.add("Amount must be present and greater than 0");
         }
         if (transactionRequest.getTaxRate() == null || transactionRequest.getReportedTax() == null){
-            message = "Tax rate & Reported tax must be present in the value";
+            message.add("Tax rate & Reported tax must be present in the value");
         }
         if (transactionRequest.getTransactionType() == null) {
-            return "Transaction type is must be present in the value";
+            message.add("Transaction type is must be present in the value");
         }
         return message;
 
